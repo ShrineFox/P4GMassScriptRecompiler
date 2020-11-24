@@ -73,6 +73,14 @@ namespace P4GMassScriptRecompiler
             int id = 0;
             foreach (var combination in combinations.Where(x => x.Count() > 0))
             {
+                //Kill cmd processes
+                foreach (var process in Process.GetProcessesByName("cmd"))
+                process.Kill();
+                //Remove new bf if it already exists
+                using (WaitForFile(newBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                if (File.Exists(newBf))
+                    File.Delete(newBf);
+
                 //Set all lines to false/disabled
                 foreach (var modToggle in toggleAbles)
                     for (int i = 0; i < lines.Length; i++)
@@ -101,7 +109,7 @@ namespace P4GMassScriptRecompiler
                 using (WaitForFile(flow, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
                 System.IO.File.WriteAllText(flow, string.Join("\n", lines));
 
-                //Wait for bf to be writable
+                //Wait for bf to be usable
                 using (WaitForFile(newBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
                 if (File.Exists(newBf))
                     File.Delete(newBf);
@@ -120,10 +128,6 @@ namespace P4GMassScriptRecompiler
                 id++;
 
                 Console.WriteLine($"  Done");
-                //Remove new bf
-                using (WaitForFile(newBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
-                if (File.Exists(newBf))
-                    File.Delete(newBf);
                 //Console.ReadKey();
             }
         }
@@ -153,15 +157,18 @@ namespace P4GMassScriptRecompiler
 
         private static void Repack(string pakPack, string binPath, string newBf, string replacePath)
         {
+            string args = $"\"{pakPack}\" replace \"{binPath}\" {replacePath} \"{newBf}\"";
+            Console.WriteLine(args);
             ProcessStartInfo start = new ProcessStartInfo();
             start.FileName = "cmd";
-            start.Arguments = $"/C {pakPack} replace \"{binPath}\" {replacePath} \"{newBf}\" \"{binPath}\"";
-            start.UseShellExecute = true;
-            start.RedirectStandardOutput = false;
-            start.CreateNoWindow = true;
+            start.Arguments = $"/C {args}";
+            start.UseShellExecute = false;
+            start.RedirectStandardOutput = true;
             using (Process process = Process.Start(start))
             {
+                process.WaitForExit();
             }
+            
         }
 
         private static void Compile(string compilerPath)
@@ -174,6 +181,7 @@ namespace P4GMassScriptRecompiler
             start.CreateNoWindow = true;
             using (Process process = Process.Start(start))
             {
+                process.WaitForExit();
             }
         }
 

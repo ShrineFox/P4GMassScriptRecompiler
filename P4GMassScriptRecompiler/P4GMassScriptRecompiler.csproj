@@ -51,7 +51,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\Documents\GitHub\SimpleCommandLine\Source\SimpleCommandLine\SimpleCommandLine.csproj">
+    <ProjectReference Include="..\..\..\SimpleCommandLine\Source\SimpleCommandLine\SimpleCommandLine.csproj">
       <Project>{7a1f22a9-5eed-4f8d-a3c9-a99b8ecfacb0}</Project>
       <Name>SimpleCommandLine</Name>
     </ProjectReference>

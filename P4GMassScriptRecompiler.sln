@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.30104.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "P4GMassScriptRecompiler", "P4GMassScriptRecompiler\P4GMassScriptRecompiler.csproj", "{A56459DC-35F2-4122-8362-6D1FA7B3F438}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleCommandLine", "..\..\..\Documents\GitHub\SimpleCommandLine\Source\SimpleCommandLine\SimpleCommandLine.csproj", "{7A1F22A9-5EED-4F8D-A3C9-A99B8ECFACB0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleCommandLine", "..\..\SimpleCommandLine\Source\SimpleCommandLine\SimpleCommandLine.csproj", "{7A1F22A9-5EED-4F8D-A3C9-A99B8ECFACB0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
