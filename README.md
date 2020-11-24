@@ -1,5 +1,5 @@
 # P4GMassScriptRecompiler
-Alters .flow and and outputs each combination of changes as new a new mod. For building releases of the [P4G Mod Menu](https://github.com/ShrineFox/Persona-4-Golden-Mod-Menu).  
+Alters .flow and and outputs each combination of changes as a new mod. For building releases of the [P4G Mod Menu](https://github.com/ShrineFox/Persona-4-Golden-Mod-Menu).  
 Uses [SimpleCommandLine](https://github.com/TGEnigma/SimpleCommandLine) by [TGEnigma](https://github.com/TGEnigma) and relies on [AtlusScriptCompiler](https://ci.appveyor.com/project/TGEnigma/atlusscripttoolchain/build/artifacts) and [PackTools](https://github.com/TGEnigma/AtlusFileSystemLibrary/releases).  
 You must use a Mod Compendium folder containing the init_free.bin and Mod.xml you want to update/duplicate for each combination.  
 
