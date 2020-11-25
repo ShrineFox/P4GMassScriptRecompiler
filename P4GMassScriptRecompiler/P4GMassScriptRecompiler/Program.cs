@@ -1,4 +1,6 @@
-﻿using System;
+﻿using AtlusFileSystemLibrary;
+using AtlusFileSystemLibrary.FileSystems.PAK;
+using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -75,7 +77,7 @@ namespace P4GMassScriptRecompiler
             {
                 //Kill cmd processes
                 foreach (var process in Process.GetProcessesByName("cmd"))
-                process.Kill();
+                    process.Kill();
                 //Remove new bf if it already exists
                 using (WaitForFile(newBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
                 if (File.Exists(newBf))
@@ -120,7 +122,7 @@ namespace P4GMassScriptRecompiler
                 Console.WriteLine($"  Created new BF...");
                 using (WaitForFile(newBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
                 File.Copy(flow, Path.Combine(Path.GetDirectoryName(Options.Bin), "field.flow"), true);
-                Repack(Options.PakPack, Options.Bin, newBf, "field/script/field.bf");
+                Repack(Options.Bin, newBf, "field/script/field.bf");
 
                 Console.WriteLine($"  Repacked BIN, creating folder...");
                 //Create new Mod folder containing changes
@@ -137,7 +139,7 @@ namespace P4GMassScriptRecompiler
             //Load mod.xml text
             string modXml = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(binPath))), "Mod.xml");
             string[] xmlTxt = File.ReadAllLines(modXml);
-            for(int i = 0; i < xmlTxt.Length; i++)
+            for (int i = 0; i < xmlTxt.Length; i++)
             {
                 //Set unique ID for keeping separate installations
                 if (xmlTxt[i].Contains("<Id>"))
@@ -155,20 +157,24 @@ namespace P4GMassScriptRecompiler
             CopyDir(Path.GetDirectoryName(modXml), newDir);
         }
 
-        private static void Repack(string pakPack, string binPath, string newBf, string replacePath)
+        private static void Repack(string binPath, string newBf, string replacePath)
         {
-            string args = $"\"{pakPack}\" replace \"{binPath}\" {replacePath} \"{newBf}\"";
-            Console.WriteLine(args);
-            ProcessStartInfo start = new ProcessStartInfo();
-            start.FileName = "cmd";
-            start.Arguments = $"/C {args}";
-            start.UseShellExecute = false;
-            start.RedirectStandardOutput = true;
-            using (Process process = Process.Start(start))
+            using var inputStream = File.Open(binPath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+
+            if (!PAKFileSystem.TryOpen(inputStream, false, out var pak))
+                return;
+
+            using (pak)
             {
-                process.WaitForExit();
+                pak.AddFile(replacePath, newBf, ConflictPolicy.Replace);
+                using var outputStream = pak.Save();
+
+                inputStream.Seek(0, SeekOrigin.Begin);
+                outputStream.Seek(0, SeekOrigin.Begin);
+
+                outputStream.CopyTo(inputStream);
             }
-            
+
         }
 
         private static void Compile(string compilerPath)
@@ -241,9 +247,6 @@ namespace P4GMassScriptRecompiler
     {
         [Option("c", "compiler", "path", "The path to the AtlusScriptCompiler exe.", Required = true)]
         public string Compiler { get; set; } = "";
-
-        [Option("p", "pakpack", "path", "The path to the PakPack exe.", Required = true)]
-        public string PakPack { get; set; } = "";
 
         [Option("b", "bin", "path", "The path to the init_free.bin in the sample Mod folder.", Required = true)]
         public string Bin { get; set; } = "";
