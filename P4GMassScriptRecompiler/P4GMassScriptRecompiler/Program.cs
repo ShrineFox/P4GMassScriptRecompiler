@@ -198,7 +198,7 @@ namespace P4GMassScriptRecompiler
 
             // Get Files & Copy
             string[] files = Directory.GetFiles(sourceFolder);
-            foreach (string file in files)
+            foreach (string file in files
             {
                 string name = Path.GetFileName(file);
 
