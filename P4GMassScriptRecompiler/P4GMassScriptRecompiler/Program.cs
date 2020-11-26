@@ -25,6 +25,7 @@ namespace P4GMassScriptRecompiler
             ("\tbool modMenu = true;","\tbool modMenu = false;"),
             //("\tbool quickTravel = true;","\tbool quickTravel = false;"),
             ("import ( \"../QuickTravelPlus.flow\" );","//import ( \"../QuickTravelPlus.flow\" );"),
+            ("import ( \"../DungeonTravel.flow\" );","//import ( \"../DungeonTravel.flow\" );"),
             ("\tbool mobileCalendar = true;","\tbool mobileCalendar = false;"),
             ("import ( \"../VRGameOverSkip.flow\" );","//import ( \"../VRGameOverSkip.flow\" );"),
             ("\tbool findAFriend = true;","\tbool findAFriend = false;"),
@@ -35,6 +36,7 @@ namespace P4GMassScriptRecompiler
         {
             "ModMenu",
             "QuickTravelPlus",
+            "DungeonTravel",
             "MobileCalendar",
             "VRGameOverSkip",
             "FindAFriend",
@@ -152,7 +154,7 @@ namespace P4GMassScriptRecompiler
             File.WriteAllText(modXml, string.Join("\n", xmlTxt));
 
             //Create folder
-            string newDir = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(modXml)), $"P4G {description}");
+            string newDir = Path.Combine(Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(modXml)), description.Replace(", ", "\\").Replace("Square Menu with ","")), "Custom Square Menu");
             Directory.CreateDirectory(newDir);
             CopyDir(Path.GetDirectoryName(modXml), newDir);
         }
@@ -182,9 +184,9 @@ namespace P4GMassScriptRecompiler
             ProcessStartInfo start = new ProcessStartInfo();
             start.FileName = "cmd";
             start.Arguments = $"/C {compilerPath} \"{flow}\" -Compile -Encoding P4 -Library P4G -OutFormat V1 -OutFile \"{newBf}\" -Hook";
-            start.UseShellExecute = true;
+            start.UseShellExecute = false;
             start.RedirectStandardOutput = false;
-            start.CreateNoWindow = true;
+            start.CreateNoWindow = false;
             using (Process process = Process.Start(start))
             {
                 process.WaitForExit();
@@ -198,7 +200,7 @@ namespace P4GMassScriptRecompiler
 
             // Get Files & Copy
             string[] files = Directory.GetFiles(sourceFolder);
-            foreach (string file in files
+            foreach (string file in files)
             {
                 string name = Path.GetFileName(file);
 

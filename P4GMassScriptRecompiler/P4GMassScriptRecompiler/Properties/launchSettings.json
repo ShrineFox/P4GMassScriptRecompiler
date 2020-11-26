@@ -2,7 +2,7 @@
   "profiles": {
     "P4GMassScriptRecompiler": {
       "commandName": "Project",
-      "commandLineArgs": "-c \"D:\\Games\\Persona\\Tools\\P5\\AtlusScriptCompiler\\AtlusScriptCompiler.exe\" -b \"D:\\Games\\Persona\\Mod Compendium\\Mods\\Persona4Golden\\Mod Menu\\Mod Menu\\Data\\data00004\\init_free.bin\" -s 150",
+      "commandLineArgs": "-c \"D:\\Games\\Persona\\Tools\\P5\\AtlusScriptCompiler\\AtlusScriptCompiler.exe\" -b \"D:\\Games\\Persona\\Mod Compendium\\Mods\\Persona4Golden\\ShrineFox Releases\\Mod Menu\\Data\\data00004\\init_free.bin\" -s 150",
       "workingDirectory": "C:\\Users\\ryans\\Documents\\GitHub\\Persona-4-Golden-Mod-Menu"
     }
   }
