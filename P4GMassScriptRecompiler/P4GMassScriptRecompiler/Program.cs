@@ -18,29 +18,34 @@ namespace P4GMassScriptRecompiler
     {
         public static ProgramOptions Options { get; private set; }
 
-        public static string flow = Path.Combine(Directory.GetCurrentDirectory(), "field\\field.bf.flow");
-        public static string newBf = Path.Combine(Path.GetDirectoryName(flow), Path.GetFileNameWithoutExtension(flow)) + ".flow.bf";
+        public static string fieldFlow = Path.Combine(Directory.GetCurrentDirectory(), "field\\field.bf.flow");
+        public static string fieldBf = Path.Combine(Path.GetDirectoryName(fieldFlow), Path.GetFileNameWithoutExtension(fieldFlow)) + ".flow.bf";
+        public static string dngFlow = Path.Combine(Directory.GetCurrentDirectory(), "dungeon\\dungeon.bf.flow");
+        public static string dngBf = Path.Combine(Path.GetDirectoryName(fieldFlow), Path.GetFileNameWithoutExtension(dngFlow)) + ".flow.bf";
         public static List<(string, string)> toggleAbles = new List<(string, string)>
         {
             ("\tbool modMenu = true;","\tbool modMenu = false;"),
             //("\tbool quickTravel = true;","\tbool quickTravel = false;"),
             ("import ( \"../QuickTravelPlus.flow\" );","//import ( \"../QuickTravelPlus.flow\" );"),
-            ("import ( \"../DungeonTravel.flow\" );","//import ( \"../DungeonTravel.flow\" );"),
             ("\tbool mobileCalendar = true;","\tbool mobileCalendar = false;"),
-            ("import ( \"../VRGameOverSkip.flow\" );","//import ( \"../VRGameOverSkip.flow\" );"),
             ("\tbool findAFriend = true;","\tbool findAFriend = false;"),
-            ("\tbool saveAnywhere = true;","\tbool saveAnywhere = false;")
+            ("\tbool saveAnywhere = true;","\tbool saveAnywhere = false;"),
+            ("import ( \"../VRGameOverSkip.flow\" );","//import ( \"../VRGameOverSkip.flow\" );"),
+            ("import ( \"../DungeonOptions.flow\" );","//import ( \"../DungeonOptions.flow\" );"),
+            ("import ( \"../ConsistentReaperField.flow\" );", "//import ( \"../ConsistentReaperField.flow\" );")
         };
 
         public static List<string> toggleAbleNames = new List<string>
         {
             "ModMenu",
+            //"QuickTravel",
             "QuickTravelPlus",
-            "DungeonTravel",
             "MobileCalendar",
-            "VRGameOverSkip",
             "FindAFriend",
-            "SaveAnywhere"
+            "SaveAnywhere",
+            "VRGameOverSkip",
+            "DungeonOptions",
+            "ConsistentReaper"
         };
 
         public static IEnumerable<T[]> Permutations<T>(IEnumerable<T> source)
@@ -72,7 +77,7 @@ namespace P4GMassScriptRecompiler
                 return;
             }
 
-            string[] lines = File.ReadAllLines(flow);
+            string[] lines = File.ReadAllLines(fieldFlow);
             var combinations = Permutations(toggleAbleNames);
             int id = 0;
             foreach (var combination in combinations.Where(x => x.Count() > 0))
@@ -81,9 +86,9 @@ namespace P4GMassScriptRecompiler
                 foreach (var process in Process.GetProcessesByName("cmd"))
                     process.Kill();
                 //Remove new bf if it already exists
-                using (WaitForFile(newBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
-                if (File.Exists(newBf))
-                    File.Delete(newBf);
+                using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                if (File.Exists(fieldBf))
+                    File.Delete(fieldBf);
 
                 //Set all lines to false/disabled
                 foreach (var modToggle in toggleAbles)
@@ -110,25 +115,36 @@ namespace P4GMassScriptRecompiler
                 description = description.TrimEnd(',');
 
                 //Update flowscript file
-                using (WaitForFile(flow, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
-                System.IO.File.WriteAllText(flow, string.Join("\n", lines));
+                using (WaitForFile(fieldFlow, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                System.IO.File.WriteAllText(fieldFlow, string.Join("\n", lines));
 
                 //Wait for bf to be usable
-                using (WaitForFile(newBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
-                if (File.Exists(newBf))
-                    File.Delete(newBf);
+                using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                if (File.Exists(fieldBf))
+                    File.Delete(fieldBf);
 
                 Console.WriteLine($"Creating new mod: {description} ({id + 1}/{combinations.Count()})");
-                //Create new BF and replace BIN
-                Compile(Options.Compiler);
-                Console.WriteLine($"  Created new BF...");
-                using (WaitForFile(newBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
-                File.Copy(flow, Path.Combine(Path.GetDirectoryName(Options.Bin), "field.flow"), true);
-                Repack(Options.Bin, newBf, "field/script/field.bf");
+                //Create new field BF and replace BIN
+                Compile(Options.Compiler, fieldFlow, fieldBf);
+                Console.WriteLine($"  Created new Field BF...");
+                using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                //File.Copy(fieldFlow, Path.Combine(Path.GetDirectoryName(Options.Bin), "field.flow"), true);
+                string newFieldBfPath = Path.GetDirectoryName(Options.Bin) + "\\init_free\\field\\script\\field.bf";
+                Directory.CreateDirectory(Path.GetDirectoryName(newFieldBfPath));
+                File.Copy(fieldBf, newFieldBfPath, true);
+                if (description.Contains("ConsistentReaper"))
+                {
+                    //Compile and include Dungeon Bf for Reaper mod
+                    Compile(Options.Compiler, dngFlow, dngBf);
+                    Console.WriteLine($"  Created new Dungeon BF...");
+                    File.Copy(dngBf, Path.Combine(Path.GetDirectoryName(Options.Bin), "field\\script\\dungeon.bf"), true);
+                    //File.Copy(dngFlow, Path.Combine(Path.GetDirectoryName(Options.Bin), "field\\script\\dungeon.flow"), true);
+                }
+                //Repack(Options.Bin, newFieldBfPath, "field/script/field.bf");
 
-                Console.WriteLine($"  Repacked BIN, creating folder...");
+                Console.WriteLine($"  Creating Aemulus folder...");
                 //Create new Mod folder containing changes
-                CreateFolder(newBf, Options.Bin, description, id);
+                CreateFolder(fieldBf, Options.Bin, description, id);
                 id++;
 
                 Console.WriteLine($"  Done");
@@ -161,6 +177,7 @@ namespace P4GMassScriptRecompiler
 
         private static void Repack(string binPath, string newBf, string replacePath)
         {
+            Console.WriteLine("  Repacking BIN...");
             using var inputStream = File.Open(binPath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
 
             if (!PAKFileSystem.TryOpen(inputStream, false, out var pak))
@@ -179,11 +196,11 @@ namespace P4GMassScriptRecompiler
 
         }
 
-        private static void Compile(string compilerPath)
+        private static void Compile(string compilerPath, string flow, string bf)
         {
             ProcessStartInfo start = new ProcessStartInfo();
             start.FileName = "cmd";
-            start.Arguments = $"/C {compilerPath} \"{flow}\" -Compile -Encoding P4 -Library P4G -OutFormat V1 -OutFile \"{newBf}\" -Hook";
+            start.Arguments = $"/C {compilerPath} \"{flow}\" -Compile -Encoding P4 -Library P4G -OutFormat V1 -OutFile \"{bf}\" -Hook";
             start.UseShellExecute = false;
             start.RedirectStandardOutput = false;
             start.CreateNoWindow = false;
@@ -204,7 +221,9 @@ namespace P4GMassScriptRecompiler
             {
                 string name = Path.GetFileName(file);
 
-                // ADD Unique File Name Check to Below!!!!
+                // UNCOMMENT FOR BF ONLY
+                if (name.Contains(".bin") || name.Contains(".flow"))
+                    return;
                 string dest = Path.Combine(destFolder, name);
                 File.Copy(file, dest, true);
             }
