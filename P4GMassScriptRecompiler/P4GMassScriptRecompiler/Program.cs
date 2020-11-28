@@ -21,7 +21,7 @@ namespace P4GMassScriptRecompiler
         public static string fieldFlow = Path.Combine(Directory.GetCurrentDirectory(), "field\\field.bf.flow");
         public static string fieldBf = Path.Combine(Path.GetDirectoryName(fieldFlow), Path.GetFileNameWithoutExtension(fieldFlow)) + ".flow.bf";
         public static string dngFlow = Path.Combine(Directory.GetCurrentDirectory(), "dungeon\\dungeon.bf.flow");
-        public static string dngBf = Path.Combine(Path.GetDirectoryName(fieldFlow), Path.GetFileNameWithoutExtension(dngFlow)) + ".flow.bf";
+        public static string dngBf = Path.Combine(Path.GetDirectoryName(dngFlow), Path.GetFileNameWithoutExtension(dngFlow)) + ".flow.bf";
         public static List<(string, string)> toggleAbles = new List<(string, string)>
         {
             ("\tbool modMenu = true;","\tbool modMenu = false;"),
@@ -82,69 +82,76 @@ namespace P4GMassScriptRecompiler
             int id = 0;
             foreach (var combination in combinations.Where(x => x.Count() > 0))
             {
-                //Kill cmd processes
-                foreach (var process in Process.GetProcessesByName("cmd"))
-                    process.Kill();
-                //Remove new bf if it already exists
-                using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
-                if (File.Exists(fieldBf))
-                    File.Delete(fieldBf);
-
-                //Set all lines to false/disabled
-                foreach (var modToggle in toggleAbles)
-                    for (int i = 0; i < lines.Length; i++)
-                        if (lines[i].StartsWith(modToggle.Item1))
-                            lines[i] = lines[i].Replace(modToggle.Item1, modToggle.Item2);
-
-                string description = "Square Menu with ";
-
-                foreach (var modName in combination)
+                //Uncomment to start at a certain iteration
+                //if (id > 125)
                 {
-                    //Enable mods and build description
-                    foreach (var modToggle in toggleAbles.Where(x => x.Item1.ToLower().Contains(modName.ToLower())))
-                    {
+                    //Kill cmd processes
+                    foreach (var process in Process.GetProcessesByName("cmd"))
+                        process.Kill();
+                    //Remove new bf if it already exists
+                    using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                    if (File.Exists(fieldBf))
+                        File.Delete(fieldBf);
+
+                    //Set all lines to false/disabled
+                    foreach (var modToggle in toggleAbles)
                         for (int i = 0; i < lines.Length; i++)
-                            if (lines[i].StartsWith(modToggle.Item2))
-                                lines[i] = lines[i].Replace(modToggle.Item2, modToggle.Item1);
-                        description += modName + ", ";
+                            if (lines[i].StartsWith(modToggle.Item1))
+                                lines[i] = lines[i].Replace(modToggle.Item1, modToggle.Item2);
+
+                    string description = "Square Menu with ";
+
+                    foreach (var modName in combination)
+                    {
+                        //Enable mods and build description
+                        foreach (var modToggle in toggleAbles.Where(x => x.Item1.ToLower().Contains(modName.ToLower())))
+                        {
+                            for (int i = 0; i < lines.Length; i++)
+                                if (lines[i].StartsWith(modToggle.Item2))
+                                    lines[i] = lines[i].Replace(modToggle.Item2, modToggle.Item1);
+                            description += modName + ", ";
+                        }
                     }
+
+                    //Fix description
+                    description = description.TrimEnd(' ');
+                    description = description.TrimEnd(',');
+
+                    //Update flowscript file
+                    using (WaitForFile(fieldFlow, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                    System.IO.File.WriteAllText(fieldFlow, string.Join("\n", lines));
+
+                    //Wait for bf to be usable
+                    using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                    if (File.Exists(fieldBf))
+                        File.Delete(fieldBf);
+
+                    Console.WriteLine($"Creating new mod: {description} ({id + 1}/{combinations.Count()})");
+                    //Create new field BF and replace BIN
+                    Compile(Options.Compiler, fieldFlow, fieldBf);
+                    Console.WriteLine($"  Created new Field BF...");
+                    using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                    //File.Copy(fieldFlow, Path.Combine(Path.GetDirectoryName(Options.Bin), "field.flow"), true);
+                    string newFieldBfPath = Path.GetDirectoryName(Options.Bin) + "\\init_free\\field\\script\\field.bf";
+                    Directory.CreateDirectory(Path.GetDirectoryName(newFieldBfPath));
+                    File.Copy(fieldBf, newFieldBfPath, true);
+                    if (description.Contains("ConsistentReaper"))
+                    {
+                        //Compile and include Dungeon Bf for Reaper mod
+                        Compile(Options.Compiler, dngFlow, dngBf);
+                        Console.WriteLine($"  Created new Dungeon BF...");
+                        string newDngBfPath = Path.Combine(Path.GetDirectoryName(Options.Bin) + "\\field\\script\\dungeon.bf");
+                        Directory.CreateDirectory(Path.GetDirectoryName(newDngBfPath));
+                        File.Copy(dngBf, newDngBfPath, true);
+                        //File.Copy(dngFlow, Path.Combine(Path.GetDirectoryName(newDngBfPath), "dungeon.flow"), true);
+                    }
+                    //Repack(Options.Bin, newFieldBfPath, "field/script/field.bf");
+
+                    Console.WriteLine($"  Creating Aemulus folder...");
+                    //Create new Mod folder containing changes
+                    CreateFolder(fieldBf, Options.Bin, description, id);
                 }
-
-                //Fix description
-                description = description.TrimEnd(' ');
-                description = description.TrimEnd(',');
-
-                //Update flowscript file
-                using (WaitForFile(fieldFlow, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
-                System.IO.File.WriteAllText(fieldFlow, string.Join("\n", lines));
-
-                //Wait for bf to be usable
-                using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
-                if (File.Exists(fieldBf))
-                    File.Delete(fieldBf);
-
-                Console.WriteLine($"Creating new mod: {description} ({id + 1}/{combinations.Count()})");
-                //Create new field BF and replace BIN
-                Compile(Options.Compiler, fieldFlow, fieldBf);
-                Console.WriteLine($"  Created new Field BF...");
-                using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
-                //File.Copy(fieldFlow, Path.Combine(Path.GetDirectoryName(Options.Bin), "field.flow"), true);
-                string newFieldBfPath = Path.GetDirectoryName(Options.Bin) + "\\init_free\\field\\script\\field.bf";
-                Directory.CreateDirectory(Path.GetDirectoryName(newFieldBfPath));
-                File.Copy(fieldBf, newFieldBfPath, true);
-                if (description.Contains("ConsistentReaper"))
-                {
-                    //Compile and include Dungeon Bf for Reaper mod
-                    Compile(Options.Compiler, dngFlow, dngBf);
-                    Console.WriteLine($"  Created new Dungeon BF...");
-                    File.Copy(dngBf, Path.Combine(Path.GetDirectoryName(Options.Bin), "field\\script\\dungeon.bf"), true);
-                    //File.Copy(dngFlow, Path.Combine(Path.GetDirectoryName(Options.Bin), "field\\script\\dungeon.flow"), true);
-                }
-                //Repack(Options.Bin, newFieldBfPath, "field/script/field.bf");
-
-                Console.WriteLine($"  Creating Aemulus folder...");
-                //Create new Mod folder containing changes
-                CreateFolder(fieldBf, Options.Bin, description, id);
+                
                 id++;
 
                 Console.WriteLine($"  Done");
