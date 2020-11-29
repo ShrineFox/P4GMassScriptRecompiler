@@ -92,6 +92,9 @@ namespace P4GMassScriptRecompiler
                     using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
                     if (File.Exists(fieldBf))
                         File.Delete(fieldBf);
+                    using (WaitForFile(dngBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                    if (File.Exists(dngBf))
+                        File.Delete(dngBf);
 
                     //Set all lines to false/disabled
                     foreach (var modToggle in toggleAbles)
@@ -168,7 +171,7 @@ namespace P4GMassScriptRecompiler
             {
                 //Set unique ID for keeping separate installations
                 if (xmlTxt[i].Contains("<Id>"))
-                    xmlTxt[i] = xmlTxt[i].Substring(0, xmlTxt[i].IndexOf("</Id>") - 2) + id.ToString("00") + "</Id>";
+                    xmlTxt[i] = xmlTxt[i].Substring(0, xmlTxt[i].IndexOf("</Id>") - 3) + id.ToString("000") + "</Id>";
                 //Set new description
                 if (xmlTxt[i].Contains("<Description>"))
                     xmlTxt[i] = $"  <Description>{description}</Description>";
