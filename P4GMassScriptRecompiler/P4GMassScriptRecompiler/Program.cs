@@ -82,17 +82,16 @@ namespace P4GMassScriptRecompiler
             int id = 0;
             foreach (var combination in combinations.Where(x => x.Count() > 0))
             {
-                //Uncomment to start at a certain iteration
-                //if (id > 125)
+                if (id > Options.Start)
                 {
                     //Kill cmd processes
                     foreach (var process in Process.GetProcessesByName("cmd"))
                         process.Kill();
                     //Remove new bf if it already exists
-                    using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                    using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Wait))) { };
                     if (File.Exists(fieldBf))
                         File.Delete(fieldBf);
-                    using (WaitForFile(dngBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                    using (WaitForFile(dngBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Wait))) { };
                     if (File.Exists(dngBf))
                         File.Delete(dngBf);
 
@@ -102,11 +101,10 @@ namespace P4GMassScriptRecompiler
                             if (lines[i].StartsWith(modToggle.Item1))
                                 lines[i] = lines[i].Replace(modToggle.Item1, modToggle.Item2);
 
+                    //Enable mods, build description and modify flowscript lines
                     string description = "Square Menu with ";
-
                     foreach (var modName in combination)
                     {
-                        //Enable mods and build description
                         foreach (var modToggle in toggleAbles.Where(x => x.Item1.ToLower().Contains(modName.ToLower())))
                         {
                             for (int i = 0; i < lines.Length; i++)
@@ -116,39 +114,58 @@ namespace P4GMassScriptRecompiler
                         }
                     }
 
-                    //Fix description
+                    //Remove last comma and space from description
                     description = description.TrimEnd(' ');
                     description = description.TrimEnd(',');
 
-                    //Update flowscript file
-                    using (WaitForFile(fieldFlow, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                    //Update flowscript file with changes
+                    using (WaitForFile(fieldFlow, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Wait))) { };
                     System.IO.File.WriteAllText(fieldFlow, string.Join("\n", lines));
 
                     //Wait for bf to be usable
-                    using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
+                    using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Wait))) { };
                     if (File.Exists(fieldBf))
                         File.Delete(fieldBf);
 
                     Console.WriteLine($"Creating new mod: {description} ({id + 1}/{combinations.Count()})");
-                    //Create new field BF and replace BIN
+                    //Create new field BF
                     Compile(Options.Compiler, fieldFlow, fieldBf);
                     Console.WriteLine($"  Created new Field BF...");
-                    using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Sleep))) { };
-                    //File.Copy(fieldFlow, Path.Combine(Path.GetDirectoryName(Options.Bin), "field.flow"), true);
+
+                    //Create field bf (if Aemulus format)
+                    using (WaitForFile(fieldBf, FileMode.Open, FileAccess.ReadWrite, FileShare.None, Convert.ToInt32(Options.Wait))) { };
                     string newFieldBfPath = Path.GetDirectoryName(Options.Bin) + "\\init_free\\field\\script\\field.bf";
-                    Directory.CreateDirectory(Path.GetDirectoryName(newFieldBfPath));
-                    File.Copy(fieldBf, newFieldBfPath, true);
+                    if (!Options.Aemulus)
+                    {
+                        if (Directory.Exists(Path.GetDirectoryName(newFieldBfPath)))
+                            Directory.Delete(Path.GetDirectoryName(newFieldBfPath), true);
+                    }
+                    else
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(newFieldBfPath));
+                        File.Copy(fieldBf, newFieldBfPath, true);
+                    }
+                    File.Copy(fieldFlow, Path.Combine(Path.GetDirectoryName(Options.Bin), "field.flow"), true);
+
+                    //Compile and include Dungeon Bf for Reaper mod, otherwise remove it
+                    string newDngBfPath = Path.Combine(Path.GetDirectoryName(Options.Bin) + "\\field\\script\\dungeon.bf");
                     if (description.Contains("ConsistentReaper"))
                     {
-                        //Compile and include Dungeon Bf for Reaper mod
                         Compile(Options.Compiler, dngFlow, dngBf);
                         Console.WriteLine($"  Created new Dungeon BF...");
-                        string newDngBfPath = Path.Combine(Path.GetDirectoryName(Options.Bin) + "\\field\\script\\dungeon.bf");
                         Directory.CreateDirectory(Path.GetDirectoryName(newDngBfPath));
                         File.Copy(dngBf, newDngBfPath, true);
-                        //File.Copy(dngFlow, Path.Combine(Path.GetDirectoryName(newDngBfPath), "dungeon.flow"), true);
+                        File.Copy(dngFlow, Path.Combine(Path.GetDirectoryName(newDngBfPath), "dungeon.flow"), true);
                     }
-                    //Repack(Options.Bin, newFieldBfPath, "field/script/field.bf");
+                    else
+                    {
+                        if (Directory.Exists(Path.GetDirectoryName(newDngBfPath)))
+                            Directory.Delete(Path.GetDirectoryName(newDngBfPath), true);
+                    }
+
+                    //Repack BIN if not using Aemulus format
+                    if (!Options.Aemulus)
+                        Repack(Options.Bin, newFieldBfPath, "field/script/field.bf");
 
                     Console.WriteLine($"  Creating Aemulus folder...");
                     //Create new Mod folder containing changes
@@ -158,7 +175,6 @@ namespace P4GMassScriptRecompiler
                 id++;
 
                 Console.WriteLine($"  Done");
-                //Console.ReadKey();
             }
         }
 
@@ -231,8 +247,9 @@ namespace P4GMassScriptRecompiler
             {
                 string name = Path.GetFileName(file);
 
-                // UNCOMMENT FOR BF ONLY
-                if (name.Contains(".bin") || name.Contains(".flow"))
+                if (Options.Aemulus && name.Contains(".bin"))
+                    return;
+                if (!Options.Flow && name.Contains(".flow"))
                     return;
                 string dest = Path.Combine(destFolder, name);
                 File.Copy(file, dest, true);
@@ -282,7 +299,16 @@ namespace P4GMassScriptRecompiler
         [Option("b", "bin", "path", "The path to the init_free.bin in the sample Mod folder.", Required = true)]
         public string Bin { get; set; } = "";
 
-        [Option("s", "sleep", "integer", "The number of milliseconds to wait before trying to modify a file that was just in use (default is 150).")]
-        public int Sleep { get; set; } = 150;
+        [Option("a", "aemulus", "boolean", "If enabled, use Aemulus Package structure instead of repacking .bin.")]
+        public bool Aemulus { get; set; } = false;
+
+        [Option("f", "flow", "boolean", "If enabled, include uncompiled field/dungeon flowscripts.")]
+        public bool Flow { get; set; } = false;
+
+        [Option("w", "wait", "integer", "The number of milliseconds to wait before trying to modify a file that was just in use (default is 150).")]
+        public int Wait { get; set; } = 150;
+
+        [Option("s", "start", "integer", "The number of the iteration to start at (default is 0).")]
+        public int Start { get; set; } = 0;
     }
 }
