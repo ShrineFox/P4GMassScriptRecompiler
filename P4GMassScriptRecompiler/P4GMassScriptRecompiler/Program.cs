@@ -82,7 +82,7 @@ namespace P4GMassScriptRecompiler
             int id = 0;
             foreach (var combination in combinations.Where(x => x.Count() > 0))
             {
-                if (id > Options.Start)
+                if (id >= Options.Start)
                 {
                     //Kill cmd processes
                     foreach (var process in Process.GetProcessesByName("cmd"))
@@ -165,7 +165,7 @@ namespace P4GMassScriptRecompiler
 
                     //Repack BIN if not using Aemulus format
                     if (!Options.Aemulus)
-                        Repack(Options.Bin, newFieldBfPath, "field/script/field.bf");
+                        Repack(Options.Bin, fieldBf, "field/script/field.bf");
 
                     Console.WriteLine($"  Creating Aemulus folder...");
                     //Create new Mod folder containing changes
@@ -194,6 +194,9 @@ namespace P4GMassScriptRecompiler
             }
             //Overwrite mod.xml
             File.WriteAllText(modXml, string.Join("\n", xmlTxt));
+
+            //Remove empty dirs
+            RemoveEmptyDirs(Path.GetDirectoryName(binPath));
 
             //Create folder
             string newDir = Path.Combine(Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(modXml)), description.Replace(", ", "\\").Replace("Square Menu with ","")), "Custom Square Menu");
@@ -247,12 +250,15 @@ namespace P4GMassScriptRecompiler
             {
                 string name = Path.GetFileName(file);
 
-                if (Options.Aemulus && name.Contains(".bin"))
-                    return;
-                if (!Options.Flow && name.Contains(".flow"))
-                    return;
-                string dest = Path.Combine(destFolder, name);
-                File.Copy(file, dest, true);
+                if (Options.Aemulus && name.Contains(".bin") || (!Options.Flow && name.Contains(".flow")))
+                {
+                    // Skip
+                }
+                else 
+                {
+                    string dest = Path.Combine(destFolder, name);
+                    File.Copy(file, dest, true);
+                }
             }
 
             // Get dirs recursively and copy files
@@ -286,6 +292,19 @@ namespace P4GMassScriptRecompiler
             }
 
             return null;
+        }
+
+        private static void RemoveEmptyDirs(string dir)
+        {
+            foreach (var directory in Directory.GetDirectories(dir))
+            {
+                RemoveEmptyDirs(directory);
+                if (Directory.GetFiles(directory).Length == 0 &&
+                    Directory.GetDirectories(directory).Length == 0)
+                {
+                    Directory.Delete(directory, false);
+                }
+            }
         }
 
 
