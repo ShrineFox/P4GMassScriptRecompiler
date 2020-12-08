@@ -18,34 +18,48 @@ namespace P4GMassScriptRecompiler
     {
         public static ProgramOptions Options { get; private set; }
 
-        public static string fieldFlow = Path.Combine(Directory.GetCurrentDirectory(), "field\\field.bf.flow");
+        public static string fieldFlow = Path.Combine(Directory.GetCurrentDirectory(), "init_free\\field.bf.flow");
         public static string fieldBf = Path.Combine(Path.GetDirectoryName(fieldFlow), Path.GetFileNameWithoutExtension(fieldFlow)) + ".flow.bf";
-        public static string dngFlow = Path.Combine(Directory.GetCurrentDirectory(), "dungeon\\dungeon.bf.flow");
+        public static string dngFlow = Path.Combine(Directory.GetCurrentDirectory(), "field\\dungeon.bf.flow");
         public static string dngBf = Path.Combine(Path.GetDirectoryName(dngFlow), Path.GetFileNameWithoutExtension(dngFlow)) + ".flow.bf";
         public static List<(string, string)> toggleAbles = new List<(string, string)>
         {
-            ("\tbool modMenu = true;","\tbool modMenu = false;"),
-            //("\tbool quickTravel = true;","\tbool quickTravel = false;"),
-            ("import ( \"../QuickTravelPlus.flow\" );","//import ( \"../QuickTravelPlus.flow\" );"),
-            ("\tbool mobileCalendar = true;","\tbool mobileCalendar = false;"),
-            ("\tbool findAFriend = true;","\tbool findAFriend = false;"),
-            ("\tbool saveAnywhere = true;","\tbool saveAnywhere = false;"),
-            ("import ( \"../VRGameOverSkip.flow\" );","//import ( \"../VRGameOverSkip.flow\" );"),
-            ("import ( \"../DungeonOptions.flow\" );","//import ( \"../DungeonOptions.flow\" );"),
-            ("import ( \"../ConsistentReaperField.flow\" );", "//import ( \"../ConsistentReaperField.flow\" );")
+            ("\t//BIT_ON(6420);","\tBIT_ON(6420);"), //Permanently Disable First Time Setup
+            ("\t//BIT_OFF(6421);","\tBIT_OFF(6421);"), //Permanently Disable Mod Menu
+            ("\t//BIT_OFF(6429);","\tBIT_OFF(6429);"), //Permanently Disable Options
+
+            ("\t//BIT_ON(6422);","\tBIT_ON(6422);"), //Permanent QuickTravelPlus
+            ("\t//BIT_ON(6423);","\tBIT_ON(6423);"), //Permanent MobileCalendar
+            //("\t//BIT_ON(6424);","\tBIT_ON(6424);"), //Permanent DungeonOptions
+            ("\t//BIT_ON(6425);","\tBIT_ON(6425);"), //Permanent Find a Friend
+            ("\t//BIT_ON(6426);","\tBIT_ON(6426);"), //Permanent Save Anywhere
+            ("\t//BIT_ON(6427);","\tBIT_ON(6427);"), //Permanent Game Over Skip
+            ("\t//BIT_ON(6428);","\tBIT_ON(6428);"), //Permanent Reap-Balanced Encounters
+
+            ("\t//BIT_OFF(6430);","\tBIT_OFF(6430);"), //Permanently Disable Fox (DungeonOptions)
+            ("\t//BIT_OFF(6431);","\tBIT_OFF(6431);"), //Permanently Floor Select (DungeonOptions)
+            ("\t//BIT_OFF(6432);","\tBIT_OFF(6432);"), //Permanently Goho-M (DungeonOptions)
+            ("\t//BIT_OFF(6433);","\tBIT_OFF(6433);"), //Permanently Organize Party (DungeonOptions)
         };
 
         public static List<string> toggleAbleNames = new List<string>
         {
-            "ModMenu",
-            //"QuickTravel",
+            "No Setup",
+            "No ModMenu",
+            "No Options",
+
             "QuickTravelPlus",
             "MobileCalendar",
+            //"DungeonOptions",
             "FindAFriend",
             "SaveAnywhere",
             "VRGameOverSkip",
-            "DungeonOptions",
-            "ConsistentReaper"
+            "ConsistentReaper",
+            
+            "Fox",
+            "FloorSelect",
+            "Goho-",
+            "OrganizeParty"
         };
 
         public static IEnumerable<T[]> Permutations<T>(IEnumerable<T> source)
@@ -102,7 +116,7 @@ namespace P4GMassScriptRecompiler
                                 lines[i] = lines[i].Replace(modToggle.Item1, modToggle.Item2);
 
                     //Enable mods, build description and modify flowscript lines
-                    string description = "Square Menu with ";
+                    string description = "Custom Square Menu with ";
                     foreach (var modName in combination)
                     {
                         foreach (var modToggle in toggleAbles.Where(x => x.Item1.ToLower().Contains(modName.ToLower())))
@@ -146,22 +160,6 @@ namespace P4GMassScriptRecompiler
                         File.Copy(fieldBf, newFieldBfPath, true);
                     }
                     File.Copy(fieldFlow, Path.Combine(Path.GetDirectoryName(Options.Bin), "field.flow"), true);
-
-                    //Compile and include Dungeon Bf for Reaper mod, otherwise remove it
-                    string newDngBfPath = Path.Combine(Path.GetDirectoryName(Options.Bin) + "\\field\\script\\dungeon.bf");
-                    if (description.Contains("ConsistentReaper"))
-                    {
-                        Compile(Options.Compiler, dngFlow, dngBf);
-                        Console.WriteLine($"  Created new Dungeon BF...");
-                        Directory.CreateDirectory(Path.GetDirectoryName(newDngBfPath));
-                        File.Copy(dngBf, newDngBfPath, true);
-                        File.Copy(dngFlow, Path.Combine(Path.GetDirectoryName(newDngBfPath), "dungeon.flow"), true);
-                    }
-                    else
-                    {
-                        if (Directory.Exists(Path.GetDirectoryName(newDngBfPath)))
-                            Directory.Delete(Path.GetDirectoryName(newDngBfPath), true);
-                    }
 
                     //Repack BIN if not using Aemulus format
                     if (!Options.Aemulus)
@@ -306,8 +304,6 @@ namespace P4GMassScriptRecompiler
                 }
             }
         }
-
-
     }
 
     public class ProgramOptions
